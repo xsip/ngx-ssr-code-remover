@@ -41,6 +41,8 @@ function removeServerCode() {
         const outputFolder = browserDistFolder + '/../browserNoServerSideCode';
         const regex = new RegExp(`${serverCodeFunctionPrefix}(.*?)\\(\\)(.+?){([^}]*)}`, 'g');
         const files = fs.readdirSync(browserDistFolder);
+        if (fs.existsSync(outputFolder))
+            fs.rmdirSync(outputFolder);
         for (const file of files) {
             if (file.endsWith('.js')) {
                 let content = fs.readFileSync(browserDistFolder + '/' + file, 'utf-8');
