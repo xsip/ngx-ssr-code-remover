@@ -30,7 +30,7 @@ export async function removeServerCode(serverCodeFunctionPrefix = 'serverCode', 
 export function serveJsFromNoSsr(server: express.Express, browserDistFolder: string) {
     server.get(/(.*?).js/i, (req: express.Request, res: express.Response) => {
         if(req.path.endsWith('.js.map')) {
-            res.status(400).send('Unauthorized');
+            res.status(401).send('Unauthorized');
             return;
         }
         const content = fs.readFileSync(`${browserDistFolder}/../browserNoServerSideCode${req.path}`, 'utf8');

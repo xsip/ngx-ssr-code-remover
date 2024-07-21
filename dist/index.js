@@ -62,7 +62,7 @@ function removeServerCode() {
 function serveJsFromNoSsr(server, browserDistFolder) {
     server.get(/(.*?).js/i, (req, res) => {
         if (req.path.endsWith('.js.map')) {
-            res.status(400).send('Unauthorized');
+            res.status(401).send('Unauthorized');
             return;
         }
         const content = fs.readFileSync(`${browserDistFolder}/../browserNoServerSideCode${req.path}`, 'utf8');
