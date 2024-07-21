@@ -1,5 +1,5 @@
 {
-  "name": "ng-ssr-remover",
+  "name": "ngx-ssr-remover",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
