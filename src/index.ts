@@ -7,7 +7,7 @@ export async function removeServerCode(serverCodeFunctionPrefix = 'serverCode', 
     const regex = new RegExp(`${serverCodeFunctionPrefix}(.*?)\\(\\)(.+?){([^}]*)}`, 'g');
     const files = fs.readdirSync(browserDistFolder);
     if(fs.existsSync(outputFolder))
-        fs.rmdirSync(outputFolder);
+        fs.rmdirSync(outputFolder, {recursive: true});
     for (const file of files) {
         if (file.endsWith('.js')) {
             let content = fs.readFileSync(browserDistFolder +'/' + file, 'utf-8');
