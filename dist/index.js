@@ -33,22 +33,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeServerCode = removeServerCode;
+exports.removeBrowserCodeFromContent = removeBrowserCodeFromContent;
 exports.serveJsFromNoSsr = serveJsFromNoSsr;
 const fs = __importStar(require("fs"));
 const [, , _inputFolder] = process.argv;
 function removeServerCode() {
     return __awaiter(this, arguments, void 0, function* (serverCodeFunctionPrefix = 'serverCode', browserDistFolder) {
         const outputFolder = browserDistFolder + '/../browserNoServerSideCode';
-        const regex = new RegExp(`${serverCodeFunctionPrefix}(.*?)\\(\\)(.+?){([^}]*)}`, 'g');
         const files = fs.readdirSync(browserDistFolder);
         for (const file of files) {
             if (file.endsWith('.js')) {
-                let content = fs.readFileSync(browserDistFolder + '/' + file, 'utf-8');
-                const serverCodes = content.match(regex);
-                for (const serverCode of serverCodes !== null && serverCodes !== void 0 ? serverCodes : []) {
-                    const emptyFn = serverCode.split(')')[0] + '){}';
-                    content = content.replace(serverCode, emptyFn);
-                }
+                const content = removeBrowserCodeFromContent(serverCodeFunctionPrefix, fs.readFileSync(browserDistFolder + '/' + file, 'utf-8'));
                 if (!fs.existsSync(outputFolder)) {
                     fs.mkdirSync(outputFolder);
                 }
@@ -58,6 +53,15 @@ function removeServerCode() {
             }
         }
     });
+}
+function removeBrowserCodeFromContent(serverCodeFunctionPrefix, content) {
+    const regex = new RegExp(`${serverCodeFunctionPrefix}(.*?)\\(\\)(.+?){([^}]*)}`, 'g');
+    const serverCodes = content.match(regex);
+    for (const serverCode of serverCodes !== null && serverCodes !== void 0 ? serverCodes : []) {
+        const emptyFn = serverCode.split(')')[0] + '){}';
+        content = content.replace(serverCode, emptyFn);
+    }
+    return content;
 }
 function serveJsFromNoSsr(server, browserDistFolder) {
     server.get(/(.*?).js/i, (req, res) => {
