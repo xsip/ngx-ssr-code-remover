@@ -1,0 +1,6 @@
+coverage
+.idea
+.gitignore
+.prettierrc
+dist
+node_modules
