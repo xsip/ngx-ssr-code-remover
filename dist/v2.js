@@ -24,7 +24,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeServerCode = removeServerCode;
-exports.RemoveOnServe = RemoveOnServe;
 exports.serveJsFromNoSsr = serveJsFromNoSsr;
 const fs = __importStar(require("fs"));
 const acorn = __importStar(require("acorn"));
@@ -113,11 +112,6 @@ function removeServerCode(inputFolder) {
     for (const file of files) {
         removeSsrFnBody(`${inputFolder}/${file}`, `${inputFolder}/../no-ssr-code/${file}`, decoratorFunctions, []);
     }
-}
-function RemoveOnServe() {
-    return (target, propertyKey, descriptor) => {
-        Reflect.defineMetadata("remove-on-serve", true, target, propertyKey);
-    };
 }
 function serveJsFromNoSsr(server, browserDistFolder) {
     server.get(/(.*?).js/i, (req, res) => {

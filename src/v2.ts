@@ -97,12 +97,7 @@ export function removeServerCode(inputFolder: string) {
     }
 }
 
-export function RemoveOnServe(): MethodDecorator {
-    return (target, propertyKey, descriptor) => {
-        Reflect.defineMetadata("remove-on-serve", true, target, propertyKey);
 
-    }
-}
 
 export function serveJsFromNoSsr(server: express.Express, browserDistFolder: string) {
     server.get(/(.*?).js/i, (req: express.Request, res: express.Response) => {

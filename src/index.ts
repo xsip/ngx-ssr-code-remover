@@ -3,6 +3,7 @@ import express from 'express';
 
 const [, , _inputFolder] = process.argv;
 export * as removeSsrCodeV2 from './v2';
+
 export async function removeServerCode(serverCodeFunctionPrefix = 'serverCode', browserDistFolder: string) {
     const outputFolder: string = browserDistFolder + '/../browserNoServerSideCode'
     const files = fs.readdirSync(browserDistFolder);
