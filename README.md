@@ -46,6 +46,14 @@ server.get('**', express.static(browserDistFolder, {
 # Even Cleaner Method by bundle parsing ( planed vor V2 )
 
 ```
+
+function RemoveOnServe(): MethodDecorator {
+  return (target, propertyKey, descriptor) => {
+    Reflect.defineMetadata("remove-on-serve", true, target, propertyKey);
+
+  }
+}
+
 import * as fs from 'fs';
 import * as acorn from 'acorn';
 
