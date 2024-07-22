@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as acorn from 'acorn';
 import "reflect-metadata";
+import express from "express";
 
 
 
@@ -101,4 +102,15 @@ export function RemoveOnServe(): MethodDecorator {
         Reflect.defineMetadata("remove-on-serve", true, target, propertyKey);
 
     }
+}
+
+export function serveJsFromNoSsr(server: express.Express, browserDistFolder: string) {
+    server.get(/(.*?).js/i, (req: express.Request, res: express.Response) => {
+        if (req.path.endsWith('.js.map')) {
+            res.status(401).send('Unauthorized');
+            return;
+        }
+        const content = fs.readFileSync(`${browserDistFolder}/../no-ssr-code${req.path}`, 'utf8');
+        res.type('js').send(content);
+    })
 }
