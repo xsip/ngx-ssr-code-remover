@@ -1,1 +1,1 @@
-{"version":3,"file":"decorator.d.ts","sourceRoot":"","sources":["../src/decorator.ts"],"names":[],"mappings":"AAAA,wBAAgB,aAAa,IAAI,eAAe,CAK/C"}
+{"version":3,"file":"decorator.d.ts","sourceRoot":"","sources":["../src/decorator.ts"],"names":[],"mappings":"AAAA,OAAO,kBAAkB,CAAC;AAE1B,wBAAgB,aAAa,IAAI,eAAe,CAK/C"}

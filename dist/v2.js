@@ -27,7 +27,6 @@ exports.removeServerCode = removeServerCode;
 exports.serveJsFromNoSsr = serveJsFromNoSsr;
 const fs = __importStar(require("fs"));
 const acorn = __importStar(require("acorn"));
-require("reflect-metadata");
 function findRemoveOnServeDecoratorDefinition(program, rawCode) {
     for (const definition of program.body) {
         if (definition.type === "FunctionDeclaration") {

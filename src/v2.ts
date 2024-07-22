@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as acorn from 'acorn';
-import "reflect-metadata";
 import express from "express";
 
 

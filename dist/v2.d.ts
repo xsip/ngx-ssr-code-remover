@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import express from "express";
 export declare function removeServerCode(inputFolder: string): void;
 export declare function serveJsFromNoSsr(server: express.Express, browserDistFolder: string): void;
