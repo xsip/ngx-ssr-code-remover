@@ -15,9 +15,9 @@ type ComponentMeta = {
     index: number;
 }
 
-function findAllComponentMetadata(inputFolder: string, file: string) {
+function findAllComponentMetadata(inputFolder: string, file: string, sourceType?: 'script' | 'module') {
     const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
-    const program = acorn.parse(rawCode, {ecmaVersion: 2022});
+    const program = acorn.parse(rawCode, {ecmaVersion: 2022, sourceType});
     const components: ComponentMeta[] = [];
     let i = -1;
     for (const definition of program.body) {
@@ -59,9 +59,9 @@ function findAllComponentMetadata(inputFolder: string, file: string) {
     return components;
 }
 
-function reloadComponentMetaFromFsForIndex(inputFolder: string, file: string, index: number, ignoreFns: string[] = []) {
+function reloadComponentMetaFromFsForIndex(inputFolder: string, file: string, index: number, ignoreFns: string[] = [], sourceType?: 'script' | 'module') {
     const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
-    const program = acorn.parse(rawCode, {ecmaVersion: 2022});
+    const program = acorn.parse(rawCode, {ecmaVersion: 2022, sourceType});
     const definition = program.body[index];
 
     if (definition.type !== 'VariableDeclaration')
@@ -150,14 +150,14 @@ function getSelector(cls: acorn.ClassExpression) {
 
 }
 
-function removeCode(inputFolder: string, file: string, output: string, outputFolder: string, componentMetaList: ComponentMeta[], doneMethods: DoneMethods, logRemovedCode: boolean) {
+function removeCode(inputFolder: string, file: string, output: string, outputFolder: string, componentMetaList: ComponentMeta[], doneMethods: DoneMethods, logRemovedCode: boolean, sourceType?: 'script' | 'module') {
     let rawFile = fs.readFileSync(inputFolder+'/'+file, 'utf-8');
     let firstIteration = true;
     for (const _matchingComponentMeta of componentMetaList) {
         let  matchingComponentMeta = _matchingComponentMeta;
         if(!firstIteration) {
             // reload duo the position change on removing code.
-            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, _matchingComponentMeta.index, doneMethods[_matchingComponentMeta.className]) as unknown as ComponentMeta;
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, _matchingComponentMeta.index, doneMethods[_matchingComponentMeta.className],sourceType) as unknown as ComponentMeta;
         }
         firstIteration = false;
         for (const ssrMethod of matchingComponentMeta.decoratedMethodNames) {
@@ -169,7 +169,7 @@ function removeCode(inputFolder: string, file: string, output: string, outputFol
             }
             const fnLength = fnBody?.end - fnBody?.start;
 
-            console.log(chalk.blue(`Removing '${chalk.blueBright(chalk.italic(ssrMethod))}' in component with selector '${chalk.blueBright(chalk.italic(matchingComponentMeta.selector))}' (${fnLength} lines of code)`));
+            console.log(chalk.blue(`Removing '${chalk.blueBright(chalk.italic(ssrMethod))}' in component with selector '${chalk.blueBright(chalk.italic(matchingComponentMeta.selector))}' ( ${file} | ${fnLength} lines of code)`));
 
             const originalCode = rawFile.substring(fnBody.start, fnBody.end);
             logRemovedCode && console.log(chalk.green.italic.bgWhite(originalCode));
@@ -177,13 +177,13 @@ function removeCode(inputFolder: string, file: string, output: string, outputFol
             fs.writeFileSync(output, rawFile, 'utf-8');
             !doneMethods[matchingComponentMeta.className] ? doneMethods[matchingComponentMeta.className] = [ssrMethod] : doneMethods[matchingComponentMeta.className].push(ssrMethod);
             // reload duo the position change on removing code.
-            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, matchingComponentMeta.index, doneMethods[matchingComponentMeta.className]) as unknown as ComponentMeta;
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, matchingComponentMeta.index, doneMethods[matchingComponentMeta.className], sourceType) as unknown as ComponentMeta;
         }
     }
 }
 
 
-export function removeServerCode(inputFolder: string, logRemovedCode = false) {
+export function removeServerCode(inputFolder: string, logRemovedCode = false, sourceType: 'script' | 'module' = 'module') {
 
     console.log(chalk.green('Starting processor'));
     console.log(chalk.green(new Date()),'\n');
@@ -198,10 +198,10 @@ export function removeServerCode(inputFolder: string, logRemovedCode = false) {
 
         for (const file of files) {
             console.log(chalk.green(`Processing ${file}\n`));
-            const components = findAllComponentMetadata(inputFolder, file);
-            fs.writeFileSync('./meta.json', JSON.stringify(components, null, 2));
-            removeCode(inputFolder, `${file}`, `${inputFolder}/../no-ssr-code/${file}`, `${inputFolder}/../no-ssr-code/`, components, {}, logRemovedCode);
- 
+            const components = findAllComponentMetadata(inputFolder, file, sourceType);
+            // fs.writeFileSync('./meta.json', JSON.stringify(components, null, 2));
+            removeCode(inputFolder, `${file}`, `${inputFolder}/../no-ssr-code/${file}`, `${inputFolder}/../no-ssr-code/`, components, {}, logRemovedCode,sourceType);
+
         }
         console.log(chalk.green('\nEnding processor with success'));
         console.log(chalk.green(new Date()),'\n');
@@ -210,6 +210,7 @@ export function removeServerCode(inputFolder: string, logRemovedCode = false) {
     } catch (e) {
         console.log(chalk.green('\nEnding processor with error'));
         console.log(chalk.green(new Date()),'\n');
+        console.log(e);
         return false;
     }
 
@@ -236,4 +237,4 @@ export function serveJsFromNoSsr(server: express.Express, browserDistFolder: str
     });
 }
 
-// removeServerCode('../dist/noahsarc-v2/browser')
+// removeServerCode('../dist/noahsarc-v2/browser', true, 'module')

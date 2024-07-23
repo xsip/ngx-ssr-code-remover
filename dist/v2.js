@@ -31,10 +31,10 @@ exports.serveJsFromNoSsr = serveJsFromNoSsr;
 const fs = __importStar(require("fs"));
 const acorn = __importStar(require("acorn"));
 const chalk_1 = __importDefault(require("chalk"));
-function findAllComponentMetadata(inputFolder, file) {
+function findAllComponentMetadata(inputFolder, file, sourceType) {
     var _a;
     const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
-    const program = acorn.parse(rawCode, { ecmaVersion: 2022 });
+    const program = acorn.parse(rawCode, { ecmaVersion: 2022, sourceType });
     const components = [];
     let i = -1;
     for (const definition of program.body) {
@@ -69,10 +69,10 @@ function findAllComponentMetadata(inputFolder, file) {
     }
     return components;
 }
-function reloadComponentMetaFromFsForIndex(inputFolder, file, index, ignoreFns = []) {
+function reloadComponentMetaFromFsForIndex(inputFolder, file, index, ignoreFns = [], sourceType) {
     var _a;
     const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
-    const program = acorn.parse(rawCode, { ecmaVersion: 2022 });
+    const program = acorn.parse(rawCode, { ecmaVersion: 2022, sourceType });
     const definition = program.body[index];
     if (definition.type !== 'VariableDeclaration')
         return;
@@ -140,7 +140,7 @@ function getSelector(cls) {
         return;
     return selectorArg.value.elements[0].elements[0].value;
 }
-function removeCode(inputFolder, file, output, outputFolder, componentMetaList, doneMethods, logRemovedCode) {
+function removeCode(inputFolder, file, output, outputFolder, componentMetaList, doneMethods, logRemovedCode, sourceType) {
     var _a;
     let rawFile = fs.readFileSync(inputFolder + '/' + file, 'utf-8');
     let firstIteration = true;
@@ -148,7 +148,7 @@ function removeCode(inputFolder, file, output, outputFolder, componentMetaList, 
         let matchingComponentMeta = _matchingComponentMeta;
         if (!firstIteration) {
             // reload duo the position change on removing code.
-            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder, file, _matchingComponentMeta.index, doneMethods[_matchingComponentMeta.className]);
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder, file, _matchingComponentMeta.index, doneMethods[_matchingComponentMeta.className], sourceType);
         }
         firstIteration = false;
         for (const ssrMethod of matchingComponentMeta.decoratedMethodNames) {
@@ -159,18 +159,18 @@ function removeCode(inputFolder, file, output, outputFolder, componentMetaList, 
                 continue;
             }
             const fnLength = (fnBody === null || fnBody === void 0 ? void 0 : fnBody.end) - (fnBody === null || fnBody === void 0 ? void 0 : fnBody.start);
-            console.log(chalk_1.default.blue(`Removing '${chalk_1.default.blueBright(chalk_1.default.italic(ssrMethod))}' in component with selector '${chalk_1.default.blueBright(chalk_1.default.italic(matchingComponentMeta.selector))}' (${fnLength} lines of code)`));
+            console.log(chalk_1.default.blue(`Removing '${chalk_1.default.blueBright(chalk_1.default.italic(ssrMethod))}' in component with selector '${chalk_1.default.blueBright(chalk_1.default.italic(matchingComponentMeta.selector))}' ( ${file} | ${fnLength} lines of code)`));
             const originalCode = rawFile.substring(fnBody.start, fnBody.end);
             logRemovedCode && console.log(chalk_1.default.green.italic.bgWhite(originalCode));
             rawFile = rawFile.replace(originalCode, '');
             fs.writeFileSync(output, rawFile, 'utf-8');
             !doneMethods[matchingComponentMeta.className] ? doneMethods[matchingComponentMeta.className] = [ssrMethod] : doneMethods[matchingComponentMeta.className].push(ssrMethod);
             // reload duo the position change on removing code.
-            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder, file, matchingComponentMeta.index, doneMethods[matchingComponentMeta.className]);
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder, file, matchingComponentMeta.index, doneMethods[matchingComponentMeta.className], sourceType);
         }
     }
 }
-function removeServerCode(inputFolder, logRemovedCode = false) {
+function removeServerCode(inputFolder, logRemovedCode = false, sourceType = 'module') {
     console.log(chalk_1.default.green('Starting processor'));
     console.log(chalk_1.default.green(new Date()), '\n');
     try {
@@ -181,9 +181,9 @@ function removeServerCode(inputFolder, logRemovedCode = false) {
         const files = fs.readdirSync(inputFolder).filter(f => f.endsWith('.js') && !f.includes('polyfills'));
         for (const file of files) {
             console.log(chalk_1.default.green(`Processing ${file}\n`));
-            const components = findAllComponentMetadata(inputFolder, file);
-            fs.writeFileSync('./meta.json', JSON.stringify(components, null, 2));
-            removeCode(inputFolder, `${file}`, `${inputFolder}/../no-ssr-code/${file}`, `${inputFolder}/../no-ssr-code/`, components, {}, logRemovedCode);
+            const components = findAllComponentMetadata(inputFolder, file, sourceType);
+            // fs.writeFileSync('./meta.json', JSON.stringify(components, null, 2));
+            removeCode(inputFolder, `${file}`, `${inputFolder}/../no-ssr-code/${file}`, `${inputFolder}/../no-ssr-code/`, components, {}, logRemovedCode, sourceType);
         }
         console.log(chalk_1.default.green('\nEnding processor with success'));
         console.log(chalk_1.default.green(new Date()), '\n');
@@ -192,6 +192,7 @@ function removeServerCode(inputFolder, logRemovedCode = false) {
     catch (e) {
         console.log(chalk_1.default.green('\nEnding processor with error'));
         console.log(chalk_1.default.green(new Date()), '\n');
+        console.log(e);
         return false;
     }
 }
@@ -212,5 +213,5 @@ function serveJsFromNoSsr(server, browserDistFolder) {
         }
     });
 }
-// removeServerCode('../dist/noahsarc-v2/browser')
+// removeServerCode('../dist/noahsarc-v2/browser', true, 'module')
 //# sourceMappingURL=v2.js.map
