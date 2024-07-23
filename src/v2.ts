@@ -44,6 +44,7 @@ function findAllComponentMetadata(inputFolder: string, file: string, sourceType?
         if (!methods || !methods.length)
             continue;
 
+        console.log(chalk.green(`Found component '${chalk.italic(selector)}'`));
         components.push({
             methods,
             className,
