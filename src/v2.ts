@@ -34,6 +34,7 @@ function resolveDecoratorDefinitionOrFns(inputFolder: string, files: string[]) {
     }
     return undefined;
 }
+
 interface DoneMethods {
     [index: string]: string[];
 }
@@ -80,7 +81,7 @@ function removeSsrFnBody(file: string, output: string, decoratedFns: {
 
                 // @ts-ignore
                 const clsName: string | undefined = definition.declarations[0].type === 'VariableDeclarator' ? definition.declarations[0].id!.name : undefined;
-                if(!clsName) {
+                if (!clsName) {
                     console.log(chalk.red(`Can't resolve classname`));
                     continue;
                 }
@@ -111,27 +112,34 @@ function removeSsrFnBody(file: string, output: string, decoratedFns: {
 
 export function removeServerCode(inputFolder: string) {
 
-    if (fs.existsSync(inputFolder + '/../no-ssr-code')) {
-        fs.rmdirSync(inputFolder + '/../no-ssr-code', {recursive: true});
-    }
-    fs.mkdirSync(inputFolder + '/../no-ssr-code');
+    try {
 
-    const files = fs.readdirSync(inputFolder).filter(f => f.endsWith('.js') && !f.includes('polyfills'));
-    const decoratorDefinition = resolveDecoratorDefinitionOrFns(inputFolder, files);
 
-    if (!decoratorDefinition)
-        throw new Error(`Couldn't resolve "RemoveOnServe" decorator in your bundled files...`);
+        if (fs.existsSync(inputFolder + '/../no-ssr-code')) {
+            fs.rmdirSync(inputFolder + '/../no-ssr-code', {recursive: true});
+        }
+        fs.mkdirSync(inputFolder + '/../no-ssr-code');
 
-    // console.log(decoratorDefinition.ssrFns)
-    const decoratorFunctions = decoratorDefinition.ssrFns?.filter((dfn, i, a) => {
-        return a.findIndex(dfn2 => dfn2.fnName === dfn.fnName && dfn2.className === dfn.className) === i;
-    }) ?? [];
+        const files = fs.readdirSync(inputFolder).filter(f => f.endsWith('.js') && !f.includes('polyfills'));
+        const decoratorDefinition = resolveDecoratorDefinitionOrFns(inputFolder, files);
 
-    for (const file of files) {
-        // console.log(`${file} pre processing size: ${fs.statSync(`${inputFolder}/${file}`).size / (1024*1024)}mb`);
-        removeSsrFnBody(`${inputFolder}/${file}`, `${inputFolder}/../no-ssr-code/${file}`, decoratorFunctions, {});
-        // console.log(`${file} post processing size: ${fs.statSync(`${inputFolder}/../no-ssr-code/${file}`).size / (1024*1024)}mb`);
+        if (!decoratorDefinition)
+            throw new Error(`Couldn't resolve "RemoveOnServe" decorator in your bundled files...`);
 
+        // console.log(decoratorDefinition.ssrFns)
+        const decoratorFunctions = decoratorDefinition.ssrFns?.filter((dfn, i, a) => {
+            return a.findIndex(dfn2 => dfn2.fnName === dfn.fnName && dfn2.className === dfn.className) === i;
+        }) ?? [];
+
+        for (const file of files) {
+            // console.log(`${file} pre processing size: ${fs.statSync(`${inputFolder}/${file}`).size / (1024*1024)}mb`);
+            removeSsrFnBody(`${inputFolder}/${file}`, `${inputFolder}/../no-ssr-code/${file}`, decoratorFunctions, {});
+            // console.log(`${file} post processing size: ${fs.statSync(`${inputFolder}/../no-ssr-code/${file}`).size / (1024*1024)}mb`);
+
+        }
+        return true;
+    } catch (e) {
+        return false;
     }
 }
 
