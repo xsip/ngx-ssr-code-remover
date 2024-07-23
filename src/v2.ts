@@ -1,41 +1,125 @@
 import * as fs from 'fs';
 import * as acorn from 'acorn';
-import express from "express";
+import express from 'express';
 import {default as chalk} from 'chalk';
 
-function findRemoveOnServeDecoratorDefinitionOrFns(program: acorn.Program, rawCode: string) {
-    const ssrFns: { className: string; fnName: string }[] = [];
+
+type ComponentMeta = {
+    methods: acorn.MethodDefinition[];
+    decoratedMethodNames: string[];
+    allMethodNames: string[];
+    classDefinition: acorn.ClassExpression;
+    className: string;
+    selector: string;
+    file: string;
+    index: number;
+}
+
+function findAllComponentMetadata(inputFolder: string, file: string) {
+    const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
+    const program = acorn.parse(rawCode, {ecmaVersion: 2022});
+    const components: ComponentMeta[] = [];
+    let i = -1;
     for (const definition of program.body) {
+        i++;
+        if (definition.type !== 'VariableDeclaration')
+            continue;
+        if (definition.declarations[0].type !== 'VariableDeclarator' || definition.declarations[0].init?.type !== 'ClassExpression')
+            continue;
+        const declarationCode = rawCode.substring(definition.start, definition.end);
+        if (!declarationCode.includes('cmp'))
+            continue;
+
+        const className = definition.declarations[0].type === 'VariableDeclarator' ? (definition.declarations[0].id as acorn.Identifier)!.name : undefined;
+        if (!className)
+            continue;
+        const classDefinition = definition.declarations[0].init as acorn.ClassExpression;
+        const selector = getSelector(classDefinition);
+
+        if (!selector)
+            continue;
+
+        const methods = classDefinition.body.body.filter(fn => fn.type === 'MethodDefinition') as acorn.MethodDefinition[];
+
+        if (!methods || !methods.length)
+            continue;
+
+        components.push({
+            methods,
+            className,
+            classDefinition,
+            selector: selector as string,
+            index: i,
+            file,
+            decoratedMethodNames: findDecoratedFunctions(program, className, rawCode, file),
+            allMethodNames: methods.map(method => (method.key as acorn.Identifier).name)
+        });
+
+    }
+    return components;
+}
+
+function reloadComponentMetaFromFsForIndex(inputFolder: string, file: string, index: number, ignoreFns: string[] = []) {
+    const rawCode = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
+    const program = acorn.parse(rawCode, {ecmaVersion: 2022});
+    const definition = program.body[index];
+
+    if (definition.type !== 'VariableDeclaration')
+        return;
+
+    if (definition.declarations[0].type !== 'VariableDeclarator' || definition.declarations[0].init?.type !== 'ClassExpression')
+        return;
+
+    const declarationCode = rawCode.substring(definition.start, definition.end);
+    if (!declarationCode.includes('cmp'))
+        return;
+
+    const className = definition.declarations[0].type === 'VariableDeclarator' ? (definition.declarations[0].id as acorn.Identifier)!.name : undefined;
+    if (!className)
+        return;
+
+    const classDefinition = definition.declarations[0].init as acorn.ClassExpression;
+    const selector = getSelector(classDefinition);
+
+    if (!selector)
+        return;
+
+    const methods = classDefinition.body.body.filter(fn => fn.type === 'MethodDefinition') as acorn.MethodDefinition[];
+
+    if (!methods || !methods.length)
+        return;
+    return {
+        methods,
+        className,
+        classDefinition,
+        selector: selector as string,
+        index,
+        file,
+        decoratedMethodNames: findDecoratedFunctions(program, className, rawCode, file).filter(method => !ignoreFns.includes(method)),
+        allMethodNames: methods.map(method => (method.key as acorn.Identifier).name).filter(method => !ignoreFns.includes(method))
+    };
+}
+
+function findDecoratedFunctions(program: acorn.Program, inClass: string, rawCode: string, file: string) {
+    const ssrFns: string[] = [];
+    let i = 0;
+    for (const definition of program.body) {
+
         if (rawCode.substring(definition.start, definition.end).includes('.RemoveOnServe')) {
-
-            if (definition.type === "FunctionDeclaration") {
-                return {definition, ssrFns: undefined};
-            }
             if (definition.type === 'ExpressionStatement') {
-                ssrFns.push({
-                    className: ((((definition.expression as acorn.CallExpression).arguments[1] as acorn.MemberExpression).object) as acorn.Identifier).name as string,
-                    fnName: ((definition.expression as acorn.CallExpression).arguments[2] as acorn.Literal).value as string
-                });
+
+                const className = ((((definition.expression as acorn.CallExpression).arguments[1] as acorn.MemberExpression).object) as acorn.Identifier).name as string;
+                if (className === inClass) {
+                    ssrFns.push(((definition.expression as acorn.CallExpression).arguments[2] as acorn.Literal).value as string);
+                }
             }
         }
+        i++;
     }
-    return {definition: undefined, ssrFns};
+    return ssrFns;
 }
 
-function resolveDecoratorDefinitionOrFns(inputFolder: string, files: string[]) {
-    for (const file of files) {
-        const fileData = fs.readFileSync(`${inputFolder}/${file}`, 'utf-8');
-        const program = acorn.parse(fileData, {ecmaVersion: 2022});
-        console.log(chalk.green(`Searching in ${file}`));
-        const _decoratorDefinition = findRemoveOnServeDecoratorDefinitionOrFns(program, fileData)
-        if (_decoratorDefinition.definition || _decoratorDefinition.ssrFns?.length > 0) {
-            return _decoratorDefinition;
-        }
-    }
-    return undefined;
-}
-
-interface DoneMethods {
+type DoneMethods = {
     [index: string]: string[];
 }
 
@@ -66,82 +150,72 @@ function getSelector(cls: acorn.ClassExpression) {
 
 }
 
-function removeSsrFnBody(file: string, output: string, decoratedFns: {
-    className: string,
-    fnName: string
-}[], doneMethods: DoneMethods) {
-    let fileData = fs.readFileSync(file, 'utf-8');
-    const program = acorn.parse(fileData, {ecmaVersion: 2022});
-    for (const definition of program.body) {
-        // console.log(definition);
-        if (definition.type === 'VariableDeclaration' /*&& definition.declarations.find(dec => dec.id.name === 'xn')*/) {
-            if (definition.declarations[0].type === 'VariableDeclarator' && definition.declarations[0].init?.type === "ClassExpression") {
-                const cls = definition.declarations[0].init;
-                const selector = getSelector(cls);
-
-                // @ts-ignore
-                const clsName: string | undefined = definition.declarations[0].type === 'VariableDeclarator' ? definition.declarations[0].id!.name : undefined;
-                if (!clsName) {
-                    console.log(chalk.red(`Can't resolve classname`));
-                    continue;
-                }
-                const methods = (cls as acorn.ClassExpression).body.body.filter(fn => fn.type === 'MethodDefinition') as acorn.MethodDefinition[];
-                const ssrMethods = methods.filter(fn => decoratedFns.find(dFn => dFn.fnName === (fn.key as acorn.Identifier).name && dFn.className === clsName));
-                // console.log(ssrMethods);
-                for (const ssrMethod of ssrMethods) {
-                    const fnBody = ssrMethod.value.body.body[0];
-                    const fnName = (ssrMethod.key as acorn.Identifier).name;
-                    if (!fnBody || doneMethods[clsName]?.includes(fnName))
-                        continue;
-                    const fnLength = fnBody?.end - fnBody?.start;
-                    console.log(chalk.blue(`Removing '${chalk.blueBright(chalk.italic(fnName))}' in component with selector '${chalk.blueBright(chalk.italic(selector))}' (${fnLength} lines of code)`));
-
-                    const originalCode = fileData.substring(fnBody.start, fnBody.end);
-                    fileData = fileData.replace(originalCode, '');
-                    // doneMethods.push((ssrMethod.key as acorn.Identifier).name);
-                    fs.writeFileSync(output, fileData, 'utf-8');
-                    !doneMethods[clsName] ? doneMethods[clsName] = [fnName] : doneMethods[clsName].push(fnName);
-                    removeSsrFnBody(output, output, decoratedFns, doneMethods);
-                    break;
-                }
-                // fs.writeFileSync('./exp.json', JSON.stringify(ssrMethods, null, 2), 'utf-8')
+function removeCode(inputFolder: string, file: string, output: string, outputFolder: string, componentMetaList: ComponentMeta[], doneMethods: DoneMethods, logRemovedCode: boolean) {
+    let rawFile = fs.readFileSync(inputFolder+'/'+file, 'utf-8');
+    let firstIteration = true;
+    for (const _matchingComponentMeta of componentMetaList) {
+        let  matchingComponentMeta = _matchingComponentMeta;
+        if(!firstIteration) {
+            // reload duo the position change on removing code.
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, _matchingComponentMeta.index, doneMethods[_matchingComponentMeta.className]) as unknown as ComponentMeta;
+        }
+        firstIteration = false;
+        for (const ssrMethod of matchingComponentMeta.decoratedMethodNames) {
+            const fn = matchingComponentMeta.methods.find(method => (method.key as acorn.Identifier).name === ssrMethod)!;
+            const fnBody = fn.value.body.body[0];
+            if (!fnBody || doneMethods[matchingComponentMeta.className]?.includes(ssrMethod)) {
+                console.log(chalk.red(`Already done ${ssrMethod}`));
+                continue;
             }
+            const fnLength = fnBody?.end - fnBody?.start;
+
+            console.log(chalk.blue(`Removing '${chalk.blueBright(chalk.italic(ssrMethod))}' in component with selector '${chalk.blueBright(chalk.italic(matchingComponentMeta.selector))}' (${fnLength} lines of code)`));
+
+            const originalCode = rawFile.substring(fnBody.start, fnBody.end);
+            logRemovedCode && console.log(chalk.green.italic.bgWhite(originalCode));
+            rawFile = rawFile.replace(originalCode, '');
+            fs.writeFileSync(output, rawFile, 'utf-8');
+            !doneMethods[matchingComponentMeta.className] ? doneMethods[matchingComponentMeta.className] = [ssrMethod] : doneMethods[matchingComponentMeta.className].push(ssrMethod);
+            // reload duo the position change on removing code.
+            matchingComponentMeta = reloadComponentMetaFromFsForIndex(outputFolder,file, matchingComponentMeta.index, doneMethods[matchingComponentMeta.className]) as unknown as ComponentMeta;
         }
     }
 }
 
-export function removeServerCode(inputFolder: string) {
 
+export function removeServerCode(inputFolder: string, logRemovedCode = false) {
+
+    console.log(chalk.green('Starting processor'));
+    console.log(chalk.green(new Date()),'\n');
     try {
-
-
-        if (fs.existsSync(inputFolder + '/../no-ssr-code')) {
+        if (fs.existsSync(inputFolder + '/../no-ssr-code'))
             fs.rmdirSync(inputFolder + '/../no-ssr-code', {recursive: true});
-        }
+
         fs.mkdirSync(inputFolder + '/../no-ssr-code');
+        console.log(chalk.green('Created \'no-ssr-code\' folder.'));
 
         const files = fs.readdirSync(inputFolder).filter(f => f.endsWith('.js') && !f.includes('polyfills'));
-        const decoratorDefinition = resolveDecoratorDefinitionOrFns(inputFolder, files);
-
-        if (!decoratorDefinition)
-            throw new Error(`Couldn't resolve "RemoveOnServe" decorator in your bundled files...`);
-
-        // console.log(decoratorDefinition.ssrFns)
-        const decoratorFunctions = decoratorDefinition.ssrFns?.filter((dfn, i, a) => {
-            return a.findIndex(dfn2 => dfn2.fnName === dfn.fnName && dfn2.className === dfn.className) === i;
-        }) ?? [];
 
         for (const file of files) {
-            // console.log(`${file} pre processing size: ${fs.statSync(`${inputFolder}/${file}`).size / (1024*1024)}mb`);
-            removeSsrFnBody(`${inputFolder}/${file}`, `${inputFolder}/../no-ssr-code/${file}`, decoratorFunctions, {});
-            // console.log(`${file} post processing size: ${fs.statSync(`${inputFolder}/../no-ssr-code/${file}`).size / (1024*1024)}mb`);
-
+            console.log(chalk.green(`Processing ${file}\n`));
+            const components = findAllComponentMetadata(inputFolder, file);
+            fs.writeFileSync('./meta.json', JSON.stringify(components, null, 2));
+            removeCode(inputFolder, `${file}`, `${inputFolder}/../no-ssr-code/${file}`, `${inputFolder}/../no-ssr-code/`, components, {}, logRemovedCode);
+ 
         }
+        console.log(chalk.green('\nEnding processor with success'));
+        console.log(chalk.green(new Date()),'\n');
         return true;
+
     } catch (e) {
+        console.log(chalk.green('\nEnding processor with error'));
+        console.log(chalk.green(new Date()),'\n');
         return false;
     }
+
 }
+
+// console.log(`${file} pre processing size: ${fs.statSync(`${inputFolder}/${file}`).size / (1024*1024)}mb`);
 
 
 export function serveJsFromNoSsr(server: express.Express, browserDistFolder: string) {
@@ -159,7 +233,7 @@ export function serveJsFromNoSsr(server: express.Express, browserDistFolder: str
             const content = fs.readFileSync(`${browserDistFolder}${req.path}`, 'utf8');
             res.type('js').send(content);
         }
-    })
+    });
 }
 
 // removeServerCode('../dist/noahsarc-v2/browser')

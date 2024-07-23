@@ -23,6 +23,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const v3 = __importStar(require("./v3"));
-v3.removeServerCode('./src/mock/browser');
+const v2 = __importStar(require("./v2"));
+v2.removeServerCode('./src/mock/browser', false);
 //# sourceMappingURL=run.js.map

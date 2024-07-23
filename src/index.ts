@@ -1,12 +1,10 @@
 import * as fs from 'fs';
 import express from 'express';
-
-const [, , _inputFolder] = process.argv;
 export * as removeSsrCodeV2 from './v2';
-export * as removeSsrCodeV3 from './v3';
 
+ 
 export async function removeServerCode(serverCodeFunctionPrefix = 'serverCode', browserDistFolder: string) {
-    const outputFolder: string = browserDistFolder + '/../browserNoServerSideCode'
+    const outputFolder: string = browserDistFolder + '/../browserNoServerSideCode';
     const files = fs.readdirSync(browserDistFolder);
     for (const file of files) {
         if (file.endsWith('.js')) {
@@ -27,7 +25,7 @@ export async function removeServerCode(serverCodeFunctionPrefix = 'serverCode', 
 
 export function removeBrowserCodeFromContent(serverCodeFunctionPrefix: string, content: string) {
     const regex = new RegExp(`${serverCodeFunctionPrefix}(.*?)\\(\\)(.+?){([^}]*)}`, 'g');
-    const serverCodes = content.match(regex) as String[];
+    const serverCodes = content.match(regex) as string[];
     for (const serverCode of serverCodes ?? []) {
         const emptyFn = serverCode.split(')')[0] + '){}';
         content = content.replace(serverCode as string, emptyFn);
@@ -44,5 +42,5 @@ export function serveJsFromNoSsr(server: express.Express, browserDistFolder: str
         }
         const content = fs.readFileSync(`${browserDistFolder}/../browserNoServerSideCode${req.path}`, 'utf8');
         res.type('js').send(content);
-    })
+    });
 }

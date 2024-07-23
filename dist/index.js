@@ -32,14 +32,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeSsrCodeV3 = exports.removeSsrCodeV2 = void 0;
+exports.removeSsrCodeV2 = void 0;
 exports.removeServerCode = removeServerCode;
 exports.removeBrowserCodeFromContent = removeBrowserCodeFromContent;
 exports.serveJsFromNoSsr = serveJsFromNoSsr;
 const fs = __importStar(require("fs"));
-const [, , _inputFolder] = process.argv;
 exports.removeSsrCodeV2 = __importStar(require("./v2"));
-exports.removeSsrCodeV3 = __importStar(require("./v3"));
 function removeServerCode() {
     return __awaiter(this, arguments, void 0, function* (serverCodeFunctionPrefix = 'serverCode', browserDistFolder) {
         const outputFolder = browserDistFolder + '/../browserNoServerSideCode';

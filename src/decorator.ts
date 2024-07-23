@@ -1,8 +1,8 @@
-import "reflect-metadata";
-
+import 'reflect-metadata';
+ 
 export function RemoveOnServe(): MethodDecorator {
-    return (target, propertyKey, descriptor) => {
-        Reflect.defineMetadata("remove-on-serve", true, target, propertyKey);
+    return (target, propertyKey) => {
+        Reflect.defineMetadata('remove-on-serve', true, target, propertyKey);
 
-    }
+    };
 }
