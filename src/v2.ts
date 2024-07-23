@@ -237,4 +237,4 @@ export function serveJsFromNoSsr(server: express.Express, browserDistFolder: str
     });
 }
 
-// removeServerCode('../dist/noahsarc-v2/browser', true, 'module')
+// removeServerCode('../dist/test-project-v2/browser', true, 'module')

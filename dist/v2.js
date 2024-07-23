@@ -213,5 +213,5 @@ function serveJsFromNoSsr(server, browserDistFolder) {
         }
     });
 }
-// removeServerCode('../dist/noahsarc-v2/browser', true, 'module')
+// removeServerCode('../dist/test-project-v2/browser', true, 'module')
 //# sourceMappingURL=v2.js.map
