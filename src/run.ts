@@ -1,3 +1,3 @@
-import * as v2 from './v2';
+import * as v3 from './v3';
 
-v2.removeServerCode('./src/mock/browser');
+v3.removeServerCode('./src/mock/browser');

@@ -33,6 +33,7 @@ const acorn = __importStar(require("acorn"));
 const chalk_1 = __importDefault(require("chalk"));
 function findRemoveOnServeDecoratorDefinitionOrFns(program, rawCode) {
     const ssrFns = [];
+    let i = 0;
     for (const definition of program.body) {
         if (rawCode.substring(definition.start, definition.end).includes('.RemoveOnServe')) {
             if (definition.type === "FunctionDeclaration") {
@@ -41,10 +42,13 @@ function findRemoveOnServeDecoratorDefinitionOrFns(program, rawCode) {
             if (definition.type === 'ExpressionStatement') {
                 ssrFns.push({
                     className: (definition.expression.arguments[1].object).name,
+                    classIndex: i - 1,
+                    classInstance: program.body[i - 1],
                     fnName: definition.expression.arguments[2].value
                 });
             }
         }
+        i++;
     }
     return { definition: undefined, ssrFns };
 }
@@ -87,7 +91,11 @@ function removeSsrFnBody(file, output, decoratedFns, doneMethods) {
     var _a, _b;
     let fileData = fs.readFileSync(file, 'utf-8');
     const program = acorn.parse(fileData, { ecmaVersion: 2022 });
-    for (const definition of program.body) {
+    const clsIndices = decoratedFns.map(dfn => dfn.classIndex).filter((e, i, a) => {
+        return a.indexOf(e) === i;
+    });
+    for (const definitionIndex of clsIndices) {
+        const definition = program.body[definitionIndex];
         // console.log(definition);
         if (definition.type === 'VariableDeclaration' /*&& definition.declarations.find(dec => dec.id.name === 'xn')*/) {
             if (definition.declarations[0].type === 'VariableDeclarator' && ((_a = definition.declarations[0].init) === null || _a === void 0 ? void 0 : _a.type) === "ClassExpression") {
@@ -165,4 +173,4 @@ function serveJsFromNoSsr(server, browserDistFolder) {
     });
 }
 // removeServerCode('../dist/noahsarc-v2/browser')
-//# sourceMappingURL=v2.js.map
+//# sourceMappingURL=v3.js.map
