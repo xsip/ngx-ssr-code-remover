@@ -1,4 +1,4 @@
-# ngx-ssr-remover
+# ngx-ssr-code-remover
 
 **ngx-ssr-remover** will post-process your angular bundle in your express server and serve bundles with ssr code removed
 ![alt text](https://github.com/xsip/ngx-ssr-code-remover/blob/main/preview.png?raw=true)
