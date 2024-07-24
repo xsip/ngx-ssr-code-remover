@@ -26,9 +26,9 @@ function findAllComponentMetadata(inputFolder: string, file: string, sourceType?
             continue;
         if (definition.declarations[0].type !== 'VariableDeclarator' || definition.declarations[0].init?.type !== 'ClassExpression')
             continue;
-        const declarationCode = rawCode.substring(definition.start, definition.end);
+        /*const declarationCode = rawCode.substring(definition.start, definition.end);
         if (!declarationCode.includes('cmp'))
-            continue;
+            continue;*/
 
         const className = definition.declarations[0].type === 'VariableDeclarator' ? (definition.declarations[0].id as acorn.Identifier)!.name : undefined;
         if (!className)
@@ -73,9 +73,9 @@ function reloadComponentMetaFromFsForIndex(inputFolder: string, file: string, in
     if (definition.declarations[0].type !== 'VariableDeclarator' || definition.declarations[0].init?.type !== 'ClassExpression')
         return;
 
-    const declarationCode = rawCode.substring(definition.start, definition.end);
+    /*const declarationCode = rawCode.substring(definition.start, definition.end);
     if (!declarationCode.includes('cmp'))
-        return;
+        return;*/
 
     const className = definition.declarations[0].type === 'VariableDeclarator' ? (definition.declarations[0].id as acorn.Identifier)!.name : undefined;
     if (!className)
