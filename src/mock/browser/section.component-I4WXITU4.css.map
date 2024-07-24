@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["section.component.ts"],
+  "sourcesContent": ["\n  :host {\n    @apply w-full h-full;\n  }"],
+  "mappings": "AAEI,MAAA,OAAA,KAAA,MAAA,IAAA",
+  "names": []
+}

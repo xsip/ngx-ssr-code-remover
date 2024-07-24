@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["cocktail.component.ts"],
+  "sourcesContent": ["\n  :host {\n    @apply md:h-auto h-[250px] w-[250px];\n  }"],
+  "mappings": "AAEI,MAAA,OAAA,MAAA,MAAA,KAAA,CAAA,OAAA,CAAA,SAAA,EAAA,OAAA,MAAA,OAAA,IAAA,CAAA",
+  "names": []
+}
