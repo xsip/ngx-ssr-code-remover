@@ -45,6 +45,8 @@ function findAllComponentMetadata(inputFolder: string, file: string, sourceType?
             continue;
 
         console.log(chalk.green(`Found component '${chalk.italic(selector)}'`));
+        // const classCode = rawCode.substring(classDefinition.start, classDefinition.end);
+        // fs.writeFileSync(`${selector as string}.component.ts`, classCode,'utf-8');
         components.push({
             methods,
             className,
